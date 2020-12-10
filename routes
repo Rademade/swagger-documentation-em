@@ -1,0 +1,51 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+
+GET     /                                  @controllers.Application.index()
+
+## List of available API Entrypoints
+GET     /api/v1                            @controllers.Application.entrypoints()
+
+## Retrieve single Endpoint details by id
+GET     /api/v1/endpoint/:id               @controllers.Endpoints.byId(id: Long)
+
+## Delete Endpoint by id
+DELETE  /api/v1/endpoint/:id               @controllers.Endpoints.delete(id: Long)
+
+## List of available Endpoints
+GET     /api/v1/endpoint                   @controllers.Endpoints.list(q: String ?= "", page: Integer ?= 1, per_page: Integer ?= 0, sort: String ?= "id")
+
+## Create new Endpoint
+POST    /api/v1/endpoint                   @controllers.Endpoints.create()
+
+## Update single Endpoint by id
+PATCH   /api/v1/endpoint/:id               @controllers.Endpoints.update(id: Long)
+
+## Retrieve connectivity information of an Endpoint
+GET     /api/v1/endpoint/:id/connectivity_info  @controllers.Endpoints.getConnectivityInfo(id: Long, subscriber: Boolean ?= true, ussd: Boolean ?= false)
+
+## Retrieve single SIM details by id
+GET     /api/v1/sim/:id                    @controllers.Sims.byId(id: Long)
+
+## Delete SIM by id
+DELETE  /api/v1/sim/:id                    @controllers.Sims.delete(id: Long)
+
+## Update single SIM by id
+PATCH   /api/v1/sim/:id                    @controllers.Sims.update(id: Long)
+
+## List of available SIMs
+GET     /api/v1/sim                        @controllers.Sims.list(q: String ?= "", page: Integer ?= 1, per_page: Integer ?= 0, sort: String ?= "id")
+
+## Retrieve details of my own Organisation
+GET     /api/v1/organisation/my            @controllers.Organisations.getOwnOrg()
+
+## Retrieve single Organisation details by id
+GET     /api/v1/organisation/:id           @controllers.Organisations.get(id: Long)
+
+## Update details of my own Organisation
+PATCH     /api/v1/organisation/my          @controllers.Organisations.updateOwnOrg()
+
+## Update single Organisation by id
+PATCH   /api/v1/organisation/:id           @controllers.Organisations.update(id: Long)

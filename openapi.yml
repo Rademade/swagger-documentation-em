@@ -1,0 +1,1167 @@
+openapi: 3.0.3
+info:
+  title: 'Internal Specifications'
+  description: 'Rest API resources of the Internal EMnify System.'
+  version: 1.2.26
+servers:
+  - url: 'https://cdn.emnify.net'
+    description: 'EMnify API'
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/endpoint:
+    get:
+      tags:
+        - Endpoint
+      summary: List Endpoints
+      description: 'Returns the list of endpoints, filtered, sorted and paged according to query parameters.'
+      operationId: GetEndpoints
+      parameters:
+        - in: query
+          name: q
+          description: |
+            Filter parameter in `<filter>:<value>` format. Expects comma separated list of filtering criteria out of the following fields:
+            * `service_profile`
+            * `created`
+            * `ip_address`
+          required: false
+          schema:
+            type: string
+            pattern: '(service_profile|created|ip_address)\:.+'
+          
+        - in: query
+          name: sort
+          description: |
+            Sort properties in a comma separated list from the following fields:
+
+            * `service_profile`
+            * `created`
+            * `id`
+            * `ip_address`
+          required: false
+          schema:
+            type: string
+            pattern: '(^-?(service_profile|created|ip_address)),?'
+          examples:
+            nosorting:
+              summary: No sort applied
+              value: ''
+            statusandid:
+              summary: Sort by ID
+              description: The minus operator sorts by id descending
+              value: '-id'
+        - name: page
+          in: query
+          description: Current page number
+          schema:
+            type: number
+        - name: per_page
+          in: query
+          description: Paging parameters defining the number of items per page
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Successfully returned a list of Endpoints.
+          headers:
+            Link:
+              schema:
+                type: string
+              description: 'URLs for navigational links used to retrieve first, previous, next and last page in a dataset'
+            X-Count-Per-Page:
+              schema:
+                type: integer
+              description: The requested `per_page` parameter
+            X-Current-Page:
+              schema:
+                type: integer
+              description: The current page number within the current data set
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total element count in the current data set
+            X-Total-Pages:
+              schema:
+                type: integer
+              description: The total page count in the current data set
+            X-Filter:
+              schema:
+                type: string
+              description: 'If filtering is applied using `?q=field:criteria` URL query parameters, the filter criteria is returned here'
+            X-Sort:
+              schema:
+                type: string
+              description: 'If sorting is applied using `?sort=sort_criteria` URL query parameters, the sort criteria is returned here'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  title: ListofEndpointsresponse
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int32
+                      example: 1
+                    created:
+                      type: string
+                      example: '2020-02-20T00:10:00.000Z'
+                    service_profile:
+                      type: object
+                      example:
+                        id: 1
+                    sim:
+                      type: object
+                      example:
+                        id: 788
+                    ip_address:
+                      type: string
+                      example: 10.203.23.75
+                  example:
+                    id: 1
+                    created: '2020-02-20T09:00:10.000Z'
+                    service_profile:
+                      id: 1
+                    sim:
+                      id: 788
+                    ip_address: 10.203.23.75
+              example:
+                - id: 1
+                  created: '2019-08-01T08:47:00.000Z'
+                  service_profile:
+                    id: 1
+                  sim:
+                    id: 788
+                  ip_address: 10.203.23.75
+                - id: 2
+                  created: '2019-08-19T16:47:00.000Z'
+                  service_profile:
+                    id: 1
+                  sim:
+                    id: 789
+                  ip_address: 10.203.23.76
+    post:
+      tags:
+        - Endpoint
+      summary: Create Endpoint
+      description: |
+        If a `sim` object is provided, the SIM with the contained ID will be assigned to the endpoint.
+
+        The following fields may be provided:
+        * `service_profile` (Object required)
+        * `sim` (Object optional)
+          - `id` (number required) SIM ID to be assigned to this endpoint
+        * `ip_address` (String optional)
+      operationId: CreateEndpoint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Endpoint
+              required:
+                - service_profile
+              type: object
+              properties:
+                service_profile:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                ip_address:
+                  type: string
+                  example: 10.203.23.78
+                sim:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+            examples:
+              CreateBasicEndpoint:
+                summary: Create Endpoint
+                description: |
+                  Creates an endpoint with only mandatory fields provided.
+                  For a list of service profiles, see `/api/v1/service_profile`.
+                value:
+                  service_profile:
+                    id: 1234
+              CreateEndpointWithOptions:
+                summary: Endpoint with optional fields
+                description: |
+                  Create an endpoint.
+                  A SIM ID is provided and the SIM with this ID will be assigned to the endpoint.
+                value:
+                  service_profile:
+                    id: 1234
+                  sim:
+                    id: 123
+        required: true
+      responses:
+        '201':
+          description: Resource successfully created
+          headers:
+            Location:
+              description: Relative location of the newly-created resource.
+              schema:
+                type: string
+                example: /api/v1/resource/123
+        '404':
+          description: Unexpected error in API call. See HTTP response body for details.
+          content:
+            application/json:
+              schema:
+                title: 40x Response
+                type: object
+                properties:
+                  error_code:
+                    type: number
+                  error_token:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error_code: 1601
+                error_token: Unavailable
+                message: No IP Address available.
+        '409':
+          description: Unexpected error in API call. See HTTP response body for details.
+          content:
+            application/json:
+              schema:
+                title: 40x Response
+                type: object
+                properties:
+                  error_code:
+                    type: number
+                  error_token:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error_code: 1405
+                error_token: Duplicated
+                message: 'IP Address - fd:0:0:0:0:0:0:1 already assigned.'
+        '422':
+          description: Unprocessable Entity. See HTTP response body for details.
+          content:
+            application/json:
+              schema:
+                title: ChangePassword422response
+                type: object
+                properties:
+                  error_code:
+                    type: integer
+                    format: int32
+                  error_token:
+                    type: string
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                    description: ''
+                example:
+                  error_code: 1002
+                  error_token: Failed
+                  message: Invalid old password
+                  errors:
+                    - error_code: 1400
+                      error_token: InputValidationFailed
+                      message: Wrong Password for User 'own_username'
+              example:
+                error_code: 1400
+                error_token: InputValidationFailed
+                message: InputValidationFailed
+                errors:
+                  - error_code: 1404
+                    error_token: OutOfRange
+                    message: Endpoint - IP Address out of range.
+
+  '/api/v1/endpoint/{endpoint_id}':
+    parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        description: The numeric ID of an Endpoint
+        schema:
+          type: number
+    get:
+      tags:
+        - Endpoint
+      summary: Get Endpoint
+      description: Retrieves information on an endpoint with a given id.
+      operationId: EndpointByIdGet
+      responses:
+        '200':
+          description: Model description
+          content:
+            application/json:
+              schema:
+                title: RetrieveSingleEndpointresponse
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int32
+                  created:
+                    type: string
+                  service_profile:
+                    type: object
+                  sim:
+                    type: object
+                  ip_address:
+                    type: string
+                example:
+                  id: 1
+                  created: '2019-08-01T08:47:00.000Z'
+                  service_profile:
+                    id: 1
+                  sim:
+                    id: 788
+                  ip_address: 10.203.23.75
+    delete:
+      tags:
+        - Endpoint
+      summary: Delete Endpoint
+      description: Deletes an endpoint and all its child entities.
+      operationId: EndpointByIdDelete
+      responses:
+        '204':
+          description: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body
+    patch:
+      tags:
+        - Endpoint
+      summary: Update Endpoint
+      description: |
+        Updates the details of an endpoint.
+
+        You can provide following fields with this request:
+        * `service profile` (Object, optional)
+        * `ip_address` (String, optional)
+        * `sim` (Object, optional)
+      operationId: EndpointByIdPatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: UpdateEndpointrequest
+              required:
+                - service_profile
+                - ip_address
+                - sim
+              type: object
+              properties:
+                service_profile:
+                  type: object
+                ip_address:
+                  type: string
+                sim:
+                  type: object
+              example:
+                service_profile:
+                  id: 1
+                ip_address: 127.0.0.1
+                sim:
+                  id: 1
+        required: true
+      responses:
+        '204':
+          description: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body
+          
+  /api/v1/organisation/my:
+    get:
+      tags:
+        - Organisation
+      summary: My Organisation Details
+      description: You can retrieve details about your own organisation
+      operationId: MyOrganisationGet
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  organisation_type_id:
+                    type: string
+                  country_id:
+                    type: string
+                  organisation_status_id:
+                    type: string
+                  ext_reference:
+                    type: string
+                  monthly_cost_limit:
+                    type: string
+                    nullable: true
+                  currency_id:
+                    type: integer
+                  organisation_class_id:
+                    type: integer
+                  created:
+                    type: string
+                    format: date-time
+                  verification_type_id:
+                    type: string
+                    nullable: true
+                  verification:
+                    type: string
+                  brand_id:
+                    type: string
+                  default_sms_routing_id:
+                    type: string
+                    nullable: true
+                  id:
+                    type: integer
+              example:
+                id: 1234
+                name: My org name
+                ext_reference: Salesrep
+                type:
+                  id: 4
+                  description: Enterprise
+                class:
+                  id: 0
+                  description: Commercial
+                country:
+                  id: 74
+                  name: Germany
+                  country_code: '49'
+                  mcc: '262'
+                  iso_code: de
+                status:
+                  id: 0
+                  description: Enabled
+                relation:
+                  id: 718
+                  type:
+                    id: 0
+                    description: Customer of
+                monthly_cost_limit: 2000
+                currency:
+                  id: 1
+                  code: EUR
+                  symbol: €
+                created: '2016-07-28T08:10:58.000+0000'
+                verification_type:
+                  id: 3
+                  description: ID Card
+                verification: null
+  
+  '/api/v1/sim/{sim_id}':
+    parameters:
+      - name: sim_id
+        in: path
+        description: SIM ID
+        required: true
+        schema:
+          type: number
+    get:
+      tags:
+        - SIMs
+      summary: SIM Details
+      description: Retrieve SIM details for a given ID.
+      operationId: SimByIdGet
+      responses:
+        '200':
+          description: Model description
+          content:
+            application/json:
+              schema: {}
+              example:
+                id: 788
+                iccid: 736826736473229800000
+                production_date: '2019-08-01T08:48:00.000Z'
+                activation_date: '2019-08-21T18:17:00.000Z'
+                status:
+                  id: 1
+                  description: Active
+                customer_org:
+                  id: 42
+                  name: another Enterprise
+                  country:
+                    id: 74
+                    name: Germany
+                issuer_org:
+                  id: 11
+                  name: MNO
+                  country:
+                    id: 205
+                    name: United Kingdom
+                reseller_org:
+                  id: 22
+                  name: Reseller
+                  country:
+                    id: 205
+                    name: United Kingdom
+                endpoint:
+                  id: 23
+                  name: arduino02
+                  imei: null
+                  imei_lock: false
+                  created: '2019-03-29T08:45:41.000Z'
+                  last_updated: '2019-04-19T08:45:41.000Z'
+                  organisation_id: 42
+                  service_profile_id: 1
+                  tariff_profile_id: 1
+                  tags: null
+                  ip_address: 10.1.2.2
+                imsi: 123451234567811
+                msisdn: 88563748762
+                model:
+                  id: 1
+                  description: Java smartcard
+                  memory_size: 64
+                  formfactor:
+                    id: 1
+                    name: 2FF
+                    image: 2ff.jpg
+                  manufacturer:
+                    id: 1
+                    name: Motorola
+    delete:
+      tags:
+        - SIMs
+      summary: Delete a SIM
+      description: |
+        **Warning: Deleted SIMs cannot be recovered!**
+
+        Deletes a SIM. The following restrictions apply to deleting SIMs:
+
+        * SIMs with an endpoint assigned cannot be deleted.
+        * A reseller may not delete SIMs they have sold. If the SIM `reseller_org_id` field is not empty and matches the organization ID making the request, a `403` error will be returned.
+      operationId: SimByIdDelete
+      responses:
+        '204':
+          description: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body
+        '403':
+          description: The request could not be satisfied
+    patch:
+      tags:
+        - SIMs
+      summary: Update a SIM
+      description: |
+        Update SIM resource.
+
+        You can provide the following fields with this request:
+        * `issuer_organisation` (Object optional) - can be changed to a direct child organisation of appropriate type
+        * `reseller_organisation` (Object optional) - can be changed to a direct child organisation of appropriate type or emptied (`"reseller_org":{"id": null}` or `"reseller_org":{}`)
+        * `customer_organisation` (Object optional) - can be changed to own organisation or a direct child organisation of type "Enterprise" or emptied (`"customer_org":{"id": null}` or `"customer_org":{}`)
+        * `status` (Object optional)
+
+        #### Notes on update restrictions:
+
+        * A user of the Issuer organisation can update any of the updateable fields
+        * A user of the Reseller organisation can update the fields: reseller_org, customer_org
+        * A user of the Customer organisation can only update the status field
+        * The issuer_org can be updated to a child organisation of type "Mobile Network Operator" or "Service Provider"
+        * The reseller_org can be updated to a child organisation of type "Mobile Network Operator" or "Service Provider" or "Reseller"
+        * The customer_org can be updated to a child organisation of type "Enterprise"
+        * The status can be updated from id 0 ("Issued") only to id 1 ("Activated")
+        * The status can also be updated between id 1 ("Activated") and id 2 ("Suspended") back and forth
+      operationId: SimByIdPatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: UpdateSIMrequest
+              required:
+                - issuer_org
+                - reseller_org
+                - customer_org
+                - status
+              type: object
+              properties:
+                issuer_org:
+                  type: object
+                reseller_org:
+                  type: object
+                customer_org:
+                  type: object
+                status:
+                  type: object
+              example:
+                issuer_org:
+                  id: 3
+                reseller_org:
+                  id: 5
+                customer_org:
+                  id: 12
+                status:
+                  id: 2
+        required: true
+      responses:
+        '204':
+          description: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body
+        '400':
+          description: Unexpected error in API call. See HTTP response body for details.
+          content:
+            application/json:
+              schema:
+                title: 40x Response
+                type: object
+                properties:
+                  error_code:
+                    type: number
+                  error_token:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error_code: 1406
+                error_token: NotAllowed
+                message: Patching the reseller organisation of the SIM to an Enterprise not allowed.
+
+  /api/v1/service_profile:
+    get:
+      tags:
+        - Service Profiles
+      summary: List Service Profiles
+      description: |
+        Retrieves a collection of all Service Profiles for your organisation.
+
+        Returned service profiles contain just the total count of associated services, so this is the short view.
+      operationId: ServiceProfileGet
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  title: RetrieveServiceProfileListresponse
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int32
+                      example: 232
+                    name:
+                      type: string
+                      example: Smart meter
+                    description:
+                      type: string
+                      example: Data + SMS - 1G limit
+                    used_count:
+                      type: string
+                      example: 2
+                    allowed_3g:
+                      type: boolean
+                      example: true
+                    allowed_4g:
+                      type: boolean
+                      example: false
+                    allowed_nb_iot:
+                      type: boolean
+                      example: false
+                    apply_sms_quota:
+                      type: boolean
+                      example: false
+                    apply_data_quota:
+                      type: boolean
+                      example: false
+                  example:
+                    id: 232
+                    name: Smart meter
+                    description: Data + SMS - 1G limit
+                    used_count: 2
+                    allowed_3g: true
+                    allowed_4g: false
+                    allowed_nb_iot: false
+                    apply_sms_quota: false
+                    apply_data_quota: false
+              example:
+                - id: 232
+                  name: Smart meter
+                  description: Data + SMS - 1G limit
+                  used_count: 2
+                  allowed_3g: true
+                  allowed_4g: false
+                  allowed_nb_iot: false
+                  apply_sms_quota: false
+                  apply_data_quota: false
+                - id: 2
+                  name: Arduino
+                  description: Data - unlimited
+                  used_count: 7
+                  allowed_3g: true
+                  allowed_4g: true
+                  allowed_nb_iot: true
+                  apply_sms_quota: false
+                  apply_data_quota: false
+    post:
+      tags:
+        - Service Profiles
+      summary: Create Service Profile
+      description: |
+        Creates a new Service Profile. A `name` must be specified for the Service Profile and all other fields are optional.
+
+        Editable fields:
+        * `name` (String required)
+        * `description` (String optional)
+        * `allowed_3g` (boolean optional, defaults to true)
+        * `allowed_4g` (boolean optional, defaults to true)
+        * `allowed_nb_iot` (boolean optional, defaults to true)
+        * **DEPRECATED** `apply_quota` (boolean optional, defaults to false).  Use `apply_data_quota` instead. Will be ignored if `apply_data_quota` is present.
+        * `apply_data_quota` (boolean optional, defaults to false)
+        * `apply_sms_quota` (boolean optional, defaults to false)
+        * `retail` (boolean optional, defaults to false)
+        * `sms_p2p_int` (boolean optional, defaults to true)
+        * `sms_p2p_ext` (boolean optional, defaults to true)
+        * `prepaid` (boolean optional, defaults to false)
+        * `nipdp` (boolean optional, defaults to false)
+        * `api_callback` (object optional)
+        * `api_secret` (object optional)
+        * `moc_callback` (object optional)
+        * `esme_interface_type` (object optional)
+        * `breakout_region` (object optional)
+        * `dns` (object optional)
+
+        __Note:__ enabling services (SMS, Data etc.) is done via `PUT` to `/api/v1/service_profile/{profile_id}/service/{service_id}`
+      operationId: ServiceProfilePost
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: CreateaServiceProfilerequest
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                allowed_3g:
+                  type: boolean
+                allowed_4g:
+                  type: boolean
+                allowed_nb_iot:
+                  type: boolean
+                apply_sms_quota:
+                  type: boolean
+                apply_data_quota:
+                  type: boolean
+                retail:
+                  type: boolean
+                sms_p2p_int:
+                  type: boolean
+                sms_p2p_ext:
+                  type: boolean
+                prepaid:
+                  type: boolean
+                nipdp:
+                  type: boolean
+                api_callback:
+                  type: object
+                api_secret:
+                  type: object
+                moc_callback:
+                  type: object
+                esme_interface_type:
+                  type: object
+                breakout_region:
+                  type: object
+                dns:
+                  type: object
+            examples:
+              BasicServiceProfile:
+                summary: Service Profile with 3G and 4G disabled
+                value:
+                  name: 3G/4G Disabled
+                  allowed_3g: false
+                  allowed_4g: false
+              ServiceProfileWithDNS:
+                summary: Service Profile with DNS object
+                description: |
+                  A DNS config object with an ID of `3` will be applied to this Service Profile.
+                  Endpoints which use this Service Profile will use the primary and secondary nameservers specified in the DNS config with and ID of `3`.
+                  DNS configurations can be retrieved and edited at `/api/v1/dns`
+                value:
+                  name: DNS config applied
+                  dns:
+                    id: 3
+              FullServiceProfile:
+                summary: Complete Service Profile
+                value:
+                  name: Smart meter
+                  description: Data + SMS - 1G limit
+                  allowed_3g: true
+                  allowed_4g: false
+                  allowed_nb_iot: false
+                  apply_sms_quota: false
+                  apply_data_quota: false
+                  retail: false
+                  sms_p2p_int: true
+                  sms_p2p_ext: true
+                  prepaid: false
+                  nipdp: false
+                  api_callback:
+                    id: 1
+                  api_secret:
+                    id: 2
+                  moc_callback:
+                    id: 2
+                  esme_interface_type:
+                    id: 3
+                  breakout_region:
+                    id: 3
+                  dns:
+                    id: 4
+        required: true
+      responses:
+        '201':
+          description: Resource Created
+  '/api/v1/service_profile/{profile_id}':
+    parameters:
+      - name: profile_id
+        in: path
+        description: The Numeric ID of a Service Profile
+        required: true
+        schema:
+          type: number
+    get:
+      tags:
+        - Service Profiles
+      summary: Retrieve a Service Profile
+      description: Retrieve a service profile with a given id.
+      operationId: ServiceProfileByProfileIdGet
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                title: RetrieveaSingleServiceProfileresponse
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int32
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  allowed_3g:
+                    type: boolean
+                  allowed_4g:
+                    type: boolean
+                  allowed_nb_iot:
+                    type: boolean
+                  apply_sms_quota:
+                    type: boolean
+                  apply_data_quota:
+                    type: boolean
+                  retail:
+                    type: boolean
+                  sms_p2p_int:
+                    type: boolean
+                  sms_p2p_ext:
+                    type: boolean
+                  prepaid:
+                    type: boolean
+                  nipdp:
+                    type: boolean
+                  used_count:
+                    type: integer
+                    format: int32
+                  api_callback:
+                    type: object
+                  api_secret:
+                    type: object
+                  moc_callback:
+                    type: object
+                  esme_interface_type:
+                    type: object
+                  breakout_region:
+                    type: object
+                  service:
+                    type: array
+                    items:
+                      type: object
+                    description: ''
+                example:
+                  id: 232
+                  name: Smart meter
+                  description: Data + SMS - 1G limit
+                  allowed_3g: true
+                  allowed_4g: true
+                  allowed_nb_iot: true
+                  apply_sms_quota: false
+                  apply_data_quota: false
+                  retail: false
+                  sms_p2p_int: true
+                  sms_p2p_ext: true
+                  prepaid: false
+                  nipdp: false
+                  used_count: 12
+                  api_callback:
+                    id: 38
+                    url: 'https://www.customers-server.com'
+                    created: '2020-03-01T16:11:07.000Z'
+                    purpose: Customer's Webserver
+                  api_secret:
+                    id: 38
+                    purpose: K3
+                  moc_callback:
+                    id: 39
+                    url: 'https://moc.customers-server.com'
+                    created: '2020-03-01T16:11:17.000Z'
+                    purpose: Customer's Moc server
+                  esme_interface_type:
+                    description: Console
+                    id: 3
+                  breakout_region:
+                    name: eu-west-1 (VPN)
+                    ip_address: 0.0.0.0
+                    id: 3
+                  service:
+                    - id: 123
+                      description: Data
+                      teleservice_code: 7678345
+                      traffic_type:
+                        id: 1
+                        description: Data
+                        unit: GB
+                      traffic_limit:
+                        - id: 123
+                          volume: 64
+                          period:
+                            id: 33
+                            time_units: 5
+                            unit: Days
+                        - id: 234
+                          volume: 128
+                          period:
+                            id: 35
+                            time_units: 1
+                            unit: Months
+              example:
+                id: 232
+                name: Smart meter
+                description: Data + SMS - 1G limit
+                allowed_3g: true
+                allowed_4g: true
+                allowed_nb_iot: true
+                apply_sms_quota: false
+                apply_data_quota: false
+                retail: false
+                sms_p2p_int: true
+                sms_p2p_ext: true
+                prepaid: false
+                nipdp: false
+                used_count: 12
+                api_callback:
+                  id: 38
+                  url: 'https://www.customers-server.com'
+                  created: '2019-03-18T16:11:07.000Z'
+                  purpose: Customer's Webserver
+                api_secret:
+                  id: 38
+                  purpose: K3
+                moc_callback:
+                  id: 39
+                  url: 'https://moc.customers-server.com'
+                  created: '2019-03-18T16:11:17.000Z'
+                  purpose: Customer's Moc server
+                esme_interface_type:
+                  description: Console
+                  id: 3
+                breakout_region:
+                  name: eu-west-1 (VPN)
+                  ip_address: 0.0.0.0
+                  id: 3
+                service:
+                  - id: 123
+                    description: Data
+                    teleservice_code: 7678345
+                    traffic_type:
+                      id: 1
+                      description: Data
+                      unit: GB
+                    traffic_limit:
+                      - id: 123
+                        volume: 64
+                        period:
+                          id: 33
+                          time_units: 5
+                          unit: Days
+                      - id: 234
+                        volume: 128
+                        period:
+                          id: 35
+                          time_units: 1
+                          unit: Months
+    patch:
+      tags:
+        - Service Profiles
+      summary: Update Service Profile
+      description: |
+        Update a service profile with a given id.
+
+        Editable fields:
+        * `name` (String optional)
+        * `description` (String optional)
+        * `allowed_3g` (boolean optional)
+        * `allowed_4g` (boolean optional)
+        * `allowed_nb_iot` (boolean optional)
+        * __DEPRECATED__ `apply_quota` (boolean optional, defaults to false). Use `apply_data_quota` instead. Will be ignored if `apply_data_quota` is present.
+        * `apply_data_quota` (boolean optional, defaults to false)
+        * `apply_sms_quota` (boolean optional, defaults to false)
+        * `retail` (boolean optional, defaults to false)
+        * `sms_p2p_int` (boolean optional, defaults to true)
+        * `sms_p2p_ext` (boolean optional, defaults to true)
+        * `prepaid` (boolean optional, defaults to false)
+        * `nipdp` (boolean optional, defaults to false)
+        * `api_callback` (object optional) can be emptied by setting the id to null ("api_callback":{"id":null})
+        * `api_secret` (object optional) can be emptied by setting the id to null ("api_secret":{"id":null})
+        * `moc_callback` (object optional) can be emptied by setting the id to null ("moc_callback":{"id":null})
+        * `esme_interface_type` (object optional)
+        * `breakout_region` (object optional)
+        * `dns` (object optional)
+      operationId: ServiceProfileByProfileIdPatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Update Service Profile
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                allowed_3g:
+                  type: boolean
+                allowed_4g:
+                  type: boolean
+                allowed_nb_iot:
+                  type: boolean
+                apply_sms_quota:
+                  type: boolean
+                apply_data_quota:
+                  type: boolean
+                retail:
+                  type: boolean
+                sms_p2p_int:
+                  type: boolean
+                sms_p2p_ext:
+                  type: boolean
+                prepaid:
+                  type: boolean
+                nipdp:
+                  type: boolean
+                api_callback:
+                  type: object
+                api_secret:
+                  type: object
+                moc_callback:
+                  type: object
+                esme_interface_type:
+                  type: object
+                breakout_region:
+                  type: object
+                dns:
+                  type: object
+            examples:
+              UpdateServiceProfileDNS:
+                summary: Update DNS config
+                description: Update the given Service Profile to use DNS config with an ID of `4`
+                value:
+                  dns:
+                    id: 4
+              RemoveServiceProfileDNS:
+                summary: Remove DNS config
+                description: 'To remove the DNS config, the ID must be set to `null`'
+                value:
+                  dns:
+                    id: null
+              UpdateCompleteServiceProfile:
+                summary: Update all properties
+                description: Updates all properties of the specified Service Profile
+                value:
+                  name: 3G / 4G Disabled
+                  description: new description
+                  allowed_3g: false
+                  allowed_4g: false
+                  allowed_nb_iot: false
+                  apply_sms_quota: false
+                  apply_data_quota: false
+                  retail: false
+                  sms_p2p_int: true
+                  sms_p2p_ext: true
+                  prepaid: false
+                  nipdp: false
+                  api_callback:
+                    id: 1
+                  api_secret:
+                    id: 1
+                  moc_callback:
+                    id: 2
+                  esme_interface_type:
+                    id: 3
+                  breakout_region:
+                    id: 3
+                  dns:
+                    id: 4
+        required: true
+      responses:
+        '201':
+          description: Successfully updated the Service Profile
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                dns:
+                  id: 4
+                service_profile_id: '123'
+    delete:
+      tags:
+        - Service Profiles
+      summary: Delete a Service Profile
+      description: |
+        Deletes a service profile and all its associations with services and traffic limits.
+        A service profile can only be deleted if it is **not** selected on an endpoint.
+        If it is not selected on an endpoint, the used_count is 0.
+      operationId: ServiceProfileByProfileIdDelete
+      responses:
+        '204':
+          description: The server has successfully fulfilled the request and that there is no additional content to send in the response payload body
+        '409':
+          description: Unexpected error in API call. See HTTP response body for details.
+          content:
+            application/json:
+              schema:
+                title: 40x Response
+                type: object
+                properties:
+                  error_code:
+                    type: number
+                  error_token:
+                    type: string
+                  message:
+                    type: string
+              example:
+                error_code: 1407
+                error_token: CannotBeDeleted
+                message: Service Profile still referenced by Endpoint.
+                
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        An `auth_token` should be provided to authenticate a session.
+
+        To obtain an `auth_token`, see the `POST` request to
+        `/api/v1/authenticate`.
+tags:
+  - name: Endpoint
+  - name: Organisation
+  - name: SIMs
+  - name: Service Profiles
