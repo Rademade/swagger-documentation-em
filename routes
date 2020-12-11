@@ -38,6 +38,10 @@ PATCH   /api/v1/sim/:id                    @controllers.Sims.update(id: Long)
 ## List of available SIMs
 GET     /api/v1/sim                        @controllers.Sims.list(q: String ?= "", page: Integer ?= 1, per_page: Integer ?= 0, sort: String ?= "id")
 
+
+## Create Service Profile, oh silly me did not document it in time, and now I need to figure out what is that.
+POST /api/v1/service_profile               PHP > @controllers ServiceProfileController#create_or_update
+
 ## Retrieve details of my own Organisation
 GET     /api/v1/organisation/my            @controllers.Organisations.getOwnOrg()
 
